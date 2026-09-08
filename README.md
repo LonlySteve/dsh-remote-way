@@ -1,7 +1,8 @@
 # DSH 手机远程控制 · 完整设置指南（Mac + iPhone，从零到满血实时）
 
 > 本指南基于**实测跑通**的方案整理。目标：手机（iPhone）通过 SSH 隧道实时控制 Mac 上运行的 DeepSeek Harness（dsh web）。
-> 全程只需：一台一直开机的 Mac + 一个 iPhone + 一个 Tailscale 账号。标注「必做」的不要跳过。
+> 全程只需：一台一直开机的电脑 + 一部手机 + 一个 Tailscale 账号。标注「必做」的不要跳过。
+> **本文以「Mac + iPhone」为主；安卓手机 / Windows 电脑的差异见文末「附录：Windows 电脑 + 安卓手机（变体）」**，核心机制不变。
 
 ---
 
@@ -176,3 +177,45 @@ https://<你的Mac>.ts.net/?token=<TOKEN>
 > **手机实时控制 DSH = 一条能到 Mac 回环端口的隧道 + dsh web 的 launch token。**
 > 隧道二选一：**SSH 端口转发**（Termius Local，满血实时）或 **Tailscale Serve**（省事但实时慢）。
 > 日常：Mac 开 dsh web（带 --trusted-host）+ 手机隧道连着 + 主屏图标（带 token）一点即进。
+
+---
+
+## 附录 · Windows 电脑 + 安卓手机（变体）
+
+> 上文以 Mac+iPhone 为主。**电脑换 Windows、手机换安卓**时，核心机制不变（Tailscale 隧道 + dsh token），只改「手机端 App」和「电脑端开 SSH + 命令/路径」。
+
+### 手机端：安卓（几乎照搬 iPhone 那套）
+- **Tailscale**：安卓 App（Play 商店）→ 同账号 + 开 MagicDNS。
+- **SSH App**：用 **Termius（安卓版）**，或更原生的 **JuiceSSH / Termux**（都支持 `-L` 本地端口转发）。端口转发同样是：**Local 3080 → 127.0.0.1:3080**。
+- 手机浏览器开 `http://127.0.0.1:3080`、粘贴 SSH 私钥、**添加到主屏幕**（安卓：浏览器菜单 → 添加到主屏幕）——都和 iPhone 一样。
+- token、实时、Keep Alive、切网重连——**完全一样**。
+
+### 电脑端：Windows
+- **Tailscale**：Windows 桌面版，登录 + MagicDNS + 拿 tailnet IP（`tailscale status`）。
+- **DSH**：支持 Windows。用发布版：
+  ```powershell
+  npx @deepseek-ai/dsh web --trusted-host <你的Windows>.ts.net
+  ```
+  或源码版 `pnpm dsh web --trusted-host ...`（Node 用 Windows 安装版，不用 Homebrew）。
+- **开 SSH 服务器（替代 Mac 的「远程登录」）→ OpenSSH Server**，用**管理员 PowerShell**：
+  ```powershell
+  Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
+  Start-Service sshd
+  Set-Service sshd -StartupType Automatic
+  ```
+  或 设置 → 应用 → 可选功能 → **OpenSSH 服务器**；确认防火墙放行 **22 端口**。
+- **authorized_keys**：`C:\Users\<你>\.ssh\authorized_keys`；如果你是管理员账号，用 `C:\ProgramData\ssh\administrators_authorized_keys`（该文件权限要严格：仅 SYSTEM / Administrators）。
+- 手机 Termius 连 **Windows 的 tailnet IP**（100.x），建 Local 3080 → 127.0.0.1:3080，**一样**。
+- 手机开 `http://127.0.0.1:3080`（满血实时）→ **一样**。
+
+### 命令/路径差异速查（Mac → Windows）
+| Mac | Windows |
+|---|---|
+| `pnpm dsh web` | `npx @deepseek-ai/dsh web` 或 `pnpm dsh web` |
+| 系统设置→共享→远程登录 / `launchctl` | `Add-WindowsCapability ... OpenSSH.Server` |
+| `~/.ssh/authorized_keys` | `C:\Users\<你>\.ssh\authorized_keys` |
+| Homebrew 装 Tailscale | 官网下载 .exe / `winget install tailscale` |
+| `~/dsh-phone-url.sh`（zsh） | 用 PowerShell 写等价脚本，或看 `dsh web:` 打印的 token 网址 |
+
+### 完全不变的部分
+Tailscale、dsh web（`--trusted-host` / token / 实时）、端口转发概念、主屏一键、Keep Alive、切网重连——**一模一样**。
