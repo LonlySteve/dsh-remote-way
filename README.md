@@ -22,8 +22,61 @@
 **其他前提**
 - 一台能一直开机的 **Mac**（这是跑 dsh web 的主机）。
 - **iPhone**，与 Mac 登录**同一个 Tailscale 账号**。
-- DSH 在本机已装好、配有 DeepSeek API 凭据（能正常 `pnpm dsh web`）。
+- DSH 在本机已装好、配有 DeepSeek API 凭据（能正常 `dsh web`）。
 - Node ≥ 22、pnpm 已装。
+
+---
+
+## 0.5 从零部署 DSH（Mac）
+
+> 已经跑得起来 dsh web 的**跳过本节**。这里给"从没装过 DSH"的人从零走一遍。
+
+### A. 装运行环境
+```bash
+brew install node          # Node ≥ 22（推荐）
+node -v                    # 确认 ≥ 22
+corepack enable pnpm       # 或 npm install -g pnpm
+```
+
+### B. 装 / 跑 DSH（二选一）
+**方式 1 · 最省事（免装，npx 每次拉最新发布版）**
+```bash
+npx @deepseek-ai/dsh web
+```
+
+**方式 2 · 源码（推荐长期使用）**
+```bash
+git clone https://github.com/deepseek-ai/deepseek-harness.git
+cd deepseek-harness
+pnpm install
+pnpm run build          # 准备构建产物（首次、以及每次更新后都要）
+pnpm dsh web
+```
+> 后文统一假设：**源码方式 + 目录 `~/deepseek-harness`**。
+
+### C. 配置 DeepSeek API 密钥（首次必做）
+1. 启动 dsh web → 用浏览器打开 Web UI（本机会自动弹窗；或 `--no-open` 后手动开 `http://127.0.0.1:3080`）。
+2. 打开 **设置 → 模型**（Settings → Models）。
+3. 在 **DeepSeek** 卡片填 **API 密钥**（去 https://platform.deepseek.com/ 申请）→ **保存**。
+4. 密钥存在 `$DSH_HOME/.credentials.yaml`（默认 `~/.dsh/.credentials.yaml`），**只写不回显**。
+   - 也支持环境变量：`export DEEPSEEK_API_KEY=sk-...`。
+   - 其他提供方/自建网关见官方 [配置模型指南](docs/user/guide/providers.zh.md)。
+
+### D. 选工作区
+Web UI 里 **选择工作区** → 添加要让 agent 操作的项目目录 → 选中（**不选工作区，输入框不可用**）。
+
+### E. 更新 DSH
+- **npx 方式**：`npx @deepseek-ai/dsh@latest web`（加 `@latest` 强制拉最新）。
+- **全局安装**（若曾 `npm i -g @deepseek-ai/dsh`）：`npm install -g @deepseek-ai/dsh@latest`。
+- **源码方式**：
+  ```bash
+  cd ~/deepseek-harness
+  git pull
+  pnpm install
+  pnpm run build
+  ~/dsh-phone-url.sh        # 更新后重启（带上 --trusted-host 并打印新网址）
+  ```
+  > ⚠️ **更新/重启后 token 会变** → 手机端要用**新 token 网址**（`~/dsh-phone-url.sh` 会打印）。
 
 ---
 
